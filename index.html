@@ -68,6 +68,34 @@
             transition: opacity 0.3s, transform 0.3s;
         }
 
+        #dash-indicator {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            font-size: 12px;
+            color: #44ff44;
+            letter-spacing: 2px;
+        }
+
+        #low-health-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 30%, rgba(80, 0, 0, 0.4) 100%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 8;
+            animation: lowHealthPulse 1.5s infinite;
+        }
+
+        @keyframes lowHealthPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
         #controls-hint {
             position: absolute;
             top: 20px;
@@ -92,10 +120,14 @@
         <div id="crosshair"></div>
         <div id="weapon-indicator">PISTOL</div>
         <div id="ammo-display">Pistol: 12 / 12</div>
+        <div id="dash-indicator">DASH READY</div>
         <div id="pickup-message"></div>
 
         <!-- Damage Vignette -->
         <div id="damage-vignette"></div>
+        
+        <!-- Low Health Overlay -->
+        <div id="low-health-overlay"></div>
 
         <!-- HUD Container -->
         <div id="hud-container">
@@ -106,9 +138,9 @@
                 </div>
             </div>
             <div class="bar-container">
-                <div class="bar-label">STAMINA</div>
-                <div id="stamina-bar-bg">
-                    <div id="stamina-bar-fill"></div>
+                <div class="bar-label">DASH</div>
+                <div id="dash-bar-bg">
+                    <div id="dash-bar-fill"></div>
                 </div>
             </div>
         </div>
@@ -116,9 +148,10 @@
         <div id="controls-hint">
             <strong>[ CLICK TO START ]</strong><br><br>
             WASD - Move<br>
-            SHIFT - Sprint<br>
+            SHIFT - Dash<br>
             SPACE - Jump<br>
             R - Reload<br>
+            F - Flashlight<br>
             RMB - Aim<br><br>
             <strong>FIND WEAPONS</strong>
         </div>

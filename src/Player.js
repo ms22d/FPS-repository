@@ -24,12 +24,29 @@ export class Player {
         this.weapon = new Weapon(this.camera, this.soundManager);
         this.weapon.setWorld(world);
 
+        // Flashlight
+        this.flashlight = new THREE.SpotLight(0xffffcc, 2, 30, Math.PI / 6, 0.5, 1);
+        this.flashlight.position.set(0, 0, 0);
+        this.flashlight.target.position.set(0, 0, -1);
+        this.camera.add(this.flashlight);
+        this.camera.add(this.flashlight.target);
+        this.flashlightOn = true;
+
         // Settings - Tuned for weightier feel
         this.speed = 2.0;     // Was 10.0
         this.runSpeed = 4.0;  // Was 20.0 (Slightly faster than walk)
         this.jumpForce = 12;  // Was 15
         this.gravity = 45.0;
         this.playerHeight = 1.6;
+
+        // Dash settings
+        this.dashSpeed = 25.0;
+        this.dashDuration = 0.15; // seconds
+        this.dashCooldown = 3.0; // seconds
+        this.dashTimer = 0;
+        this.dashCooldownTimer = 0;
+        this.isDashing = false;
+        this.dashDirection = new THREE.Vector3();
 
         // Stats
         this.maxHealth = 100;
@@ -39,6 +56,10 @@ export class Player {
         this.staminaDrainRate = 30; // Per second
         this.staminaRegenRate = 15; // Per second
 
+        // Low health state
+        this.isLowHealth = false;
+        this.lowHealthOverlayActive = false;
+
         // State
         this.moveForward = false;
         this.moveBackward = false;
@@ -47,6 +68,9 @@ export class Player {
         this.canJump = false;
         this.isSprinting = false;
         this.isSprintKeyPressed = false; // Track key state separately
+        
+        // Auto-fire for SMG
+        this.isMouseDown = false
 
         // Step Logic
         this.stepTimer = 0;
@@ -98,8 +122,14 @@ export class Player {
                     }
                     break;
                 case 'ShiftLeft':
-                case 'ShiftRight': this.isSprintKeyPressed = true; break;
+                case 'ShiftRight': 
+                    // Dash instead of sprint
+                    if (!this.isDashing && this.dashCooldownTimer <= 0) {
+                        this.startDash();
+                    }
+                    break;
                 case 'KeyR': this.weapon.reload(); break;
+                case 'KeyF': this.toggleFlashlight(); break;
             }
         };
 
@@ -113,8 +143,6 @@ export class Player {
                 case 'KeyS': this.moveBackward = false; break;
                 case 'ArrowRight':
                 case 'KeyD': this.moveRight = false; break;
-                case 'ShiftLeft':
-                case 'ShiftRight': this.isSprintKeyPressed = false; break;
             }
         };
 
@@ -136,11 +164,12 @@ export class Player {
             }
         });
 
-        // Mouse (Weapon)
+        // Mouse (Weapon) - with auto-fire support for SMG
         document.addEventListener('mousedown', (event) => {
             if (!this.controls.isLocked) return;
 
             if (event.button === 0) { // Left Click
+                this.isMouseDown = true;
                 this.weapon.shoot(this.scene);
             } else if (event.button === 2) { // Right Click
                 this.weapon.setAim(true);
@@ -148,6 +177,9 @@ export class Player {
         });
 
         document.addEventListener('mouseup', (event) => {
+            if (event.button === 0) { // Left Click release
+                this.isMouseDown = false;
+            }
             if (event.button === 2) { // Right Click release
                 this.weapon.setAim(false);
             }
@@ -158,8 +190,56 @@ export class Player {
         this.controls.lock();
     }
 
+    toggleFlashlight() {
+        this.flashlightOn = !this.flashlightOn;
+        this.flashlight.visible = this.flashlightOn;
+    }
+
+    startDash() {
+        if (this.isDashing || this.dashCooldownTimer > 0) return;
+        
+        // Get dash direction from current movement or forward
+        const camDir = new THREE.Vector3();
+        this.camera.getWorldDirection(camDir);
+        camDir.y = 0;
+        camDir.normalize();
+
+        const camRight = new THREE.Vector3();
+        camRight.crossVectors(new THREE.Vector3(0, 1, 0), camDir).normalize();
+
+        this.dashDirection.set(0, 0, 0);
+        
+        if (this.moveForward) this.dashDirection.add(camDir);
+        if (this.moveBackward) this.dashDirection.sub(camDir);
+        if (this.moveRight) this.dashDirection.sub(camRight);
+        if (this.moveLeft) this.dashDirection.add(camRight);
+
+        // Default to forward if no direction
+        if (this.dashDirection.length() < 0.1) {
+            this.dashDirection.copy(camDir);
+        }
+        this.dashDirection.normalize();
+
+        this.isDashing = true;
+        this.dashTimer = this.dashDuration;
+        this.dashCooldownTimer = this.dashCooldown;
+    }
+
     update(delta, world) {
         if (!this.controls.isLocked) return;
+
+        // Update dash cooldown
+        if (this.dashCooldownTimer > 0) {
+            this.dashCooldownTimer -= delta;
+        }
+
+        // Update dash cooldown UI
+        this.updateDashUI();
+
+        // SMG Auto-fire - shoot while mouse is held down
+        if (this.isMouseDown && this.weapon.currentWeapon === 'smg') {
+            this.weapon.shoot(this.scene);
+        }
 
         // Update world (for weapon pickup animations)
         if (world && world.update) {
@@ -175,12 +255,30 @@ export class Player {
             });
         }
 
-        // Low Health Heartbeat
-        if (this.health < 20 && this.health > 0) {
+        // Low Health Effects
+        if (this.health < 30 && this.health > 0) {
+            // Heartbeat sound
             this.heartbeatTimer = (this.heartbeatTimer || 0) + delta;
-            if (this.heartbeatTimer > 1.0) { // Every 1 second
+            if (this.heartbeatTimer > 1.0) {
                 this.soundManager.playHeartbeat();
                 this.heartbeatTimer = 0;
+            }
+            
+            // Red screen overlay
+            if (!this.isLowHealth) {
+                this.isLowHealth = true;
+                const lowHealthOverlay = document.getElementById('low-health-overlay');
+                if (lowHealthOverlay) {
+                    lowHealthOverlay.style.opacity = '1';
+                }
+            }
+        } else {
+            if (this.isLowHealth) {
+                this.isLowHealth = false;
+                const lowHealthOverlay = document.getElementById('low-health-overlay');
+                if (lowHealthOverlay) {
+                    lowHealthOverlay.style.opacity = '0';
+                }
             }
         }
 
@@ -195,34 +293,36 @@ export class Player {
         this.velocity.z -= this.velocity.z * 10.0 * delta;
         this.velocity.y -= this.gravity * delta;
 
-        // 3. Input & Stamina
+        // 3. Input & Movement
         this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
         this.direction.x = Number(this.moveRight) - Number(this.moveLeft);
         this.direction.normalize();
 
         const isMoving = (this.moveForward || this.moveBackward || this.moveLeft || this.moveRight);
 
-        // Stamina Logic
-        if (this.isSprintKeyPressed && isMoving && this.stamina > 0) {
-            this.isSprinting = true;
-            this.stamina -= this.staminaDrainRate * delta;
-            if (this.stamina < 0) this.stamina = 0;
-        } else {
-            this.isSprinting = false;
-            // Regen only if not holding shift or not moving (or exhausted but still holding, we wait for a bit? strict regen is fine)
-            if (this.stamina < this.maxStamina) {
-                this.stamina += this.staminaRegenRate * delta;
-                if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
+        // Handle Dash
+        if (this.isDashing) {
+            this.dashTimer -= delta;
+            if (this.dashTimer <= 0) {
+                this.isDashing = false;
             }
         }
 
-        const currentSpeed = this.isSprinting ? this.runSpeed : this.speed;
+        // Movement speed - dash overrides normal movement
+        const currentSpeed = this.isDashing ? this.dashSpeed : this.speed;
 
-        if (this.moveForward || this.moveBackward) {
-            this.velocity.z -= this.direction.z * currentSpeed * delta * 50;
-        }
-        if (this.moveLeft || this.moveRight) {
-            this.velocity.x -= this.direction.x * currentSpeed * delta * 50;
+        if (this.isDashing) {
+            // During dash, move in dash direction
+            const dashMove = this.dashDirection.clone().multiplyScalar(currentSpeed * delta);
+            this.controls.getObject().position.add(dashMove);
+        } else {
+            // Normal movement
+            if (this.moveForward || this.moveBackward) {
+                this.velocity.z -= this.direction.z * currentSpeed * delta * 50;
+            }
+            if (this.moveLeft || this.moveRight) {
+                this.velocity.x -= this.direction.x * currentSpeed * delta * 50;
+            }
         }
 
         // 4. Collision Response
@@ -231,10 +331,9 @@ export class Player {
             this.canJump = true;
 
             // Step Sound Logic
-            if (isMoving) {
+            if (isMoving && !this.isDashing) {
                 this.stepTimer += delta;
-                // Faster interval when sprinting
-                const interval = this.isSprinting ? 0.35 : 0.55;
+                const interval = 0.55;
                 if (this.stepTimer > interval) {
                     this.stepTimer = 0;
                     this.soundManager.playStep();
@@ -374,6 +473,14 @@ export class Player {
             this.canJump = true;
         }
 
+        // Invisible boundary walls - keep player in arena
+        const pos = this.controls.getObject().position;
+        const boundaryLimit = 48; // Slightly inside the visible walls at 50
+        if (pos.x > boundaryLimit) pos.x = boundaryLimit;
+        if (pos.x < -boundaryLimit) pos.x = -boundaryLimit;
+        if (pos.z > boundaryLimit) pos.z = boundaryLimit;
+        if (pos.z < -boundaryLimit) pos.z = -boundaryLimit;
+
         // 6. Update Weapon
         this.weapon.update(delta, isMoving);
 
@@ -383,14 +490,30 @@ export class Player {
 
     updateHUD() {
         const healthBar = document.getElementById('health-bar-fill');
-        const staminaBar = document.getElementById('stamina-bar-fill');
+        const dashBar = document.getElementById('dash-bar-fill');
 
         if (healthBar) {
             healthBar.style.width = `${(this.health / this.maxHealth) * 100}%`;
         }
 
-        if (staminaBar) {
-            staminaBar.style.width = `${(this.stamina / this.maxStamina) * 100}%`;
+        // Update dash bar to show cooldown
+        if (dashBar) {
+            const dashReady = this.dashCooldownTimer <= 0 ? 100 : 
+                ((this.dashCooldown - this.dashCooldownTimer) / this.dashCooldown) * 100;
+            dashBar.style.width = `${dashReady}%`;
+        }
+    }
+
+    updateDashUI() {
+        const dashIndicator = document.getElementById('dash-indicator');
+        if (dashIndicator) {
+            if (this.dashCooldownTimer <= 0) {
+                dashIndicator.innerText = 'DASH READY';
+                dashIndicator.style.color = '#44ff44';
+            } else {
+                dashIndicator.innerText = `DASH: ${this.dashCooldownTimer.toFixed(1)}s`;
+                dashIndicator.style.color = '#888888';
+            }
         }
     }
 

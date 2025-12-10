@@ -39,7 +39,8 @@ const WEAPON_CONFIGS = {
         reloadTime: 2000,
         recoilKick: 0.06,
         recoilClimb: 0.04,
-        color: 0x2a2a2a
+        color: 0x2a2a2a,
+        automatic: true // Full auto
     },
     sniper: {
         name: 'Sniper',

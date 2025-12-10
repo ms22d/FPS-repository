@@ -246,16 +246,29 @@ export class World {
         const base = new THREE.Mesh(baseGeo, baseMat);
         group.add(base);
 
-        // Weapon representation (simple box for PSX style)
-        const weaponGeo = new THREE.BoxGeometry(0.15, 0.15, 0.6);
-        const weaponMat = new THREE.MeshStandardMaterial({
-            color: 0x222222,
-            flatShading: true
-        });
-        const weaponMesh = new THREE.Mesh(weaponGeo, weaponMat);
-        weaponMesh.position.y = 0.5;
-        weaponMesh.rotation.z = Math.PI / 12;
-        group.add(weaponMesh);
+        // Create full weapon model based on type
+        const weaponGroup = new THREE.Group();
+        const darkGrey = new THREE.MeshStandardMaterial({ color: 0x333333, flatShading: true });
+        const black = new THREE.MeshStandardMaterial({ color: 0x111111, flatShading: true });
+        const brown = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, flatShading: true });
+
+        switch (type) {
+            case 'shotgun':
+                this.buildShotgunPickup(weaponGroup, brown, black);
+                break;
+            case 'smg':
+                this.buildSMGPickup(weaponGroup, darkGrey, black);
+                break;
+            case 'sniper':
+                this.buildSniperPickup(weaponGroup, darkGrey, black);
+                break;
+            default:
+                this.buildPistolPickup(weaponGroup, darkGrey, black);
+        }
+
+        weaponGroup.position.y = 0.6;
+        weaponGroup.rotation.x = -Math.PI / 12;
+        group.add(weaponGroup);
 
         // Point light for glow effect
         const light = new THREE.PointLight(color, 0.8, 5);
@@ -273,6 +286,146 @@ export class World {
 
         this.scene.add(group);
         this.weaponPickups.push(group);
+    }
+
+    buildPistolPickup(group, bodyMat, accentMat) {
+        // Receiver
+        const receiverGeo = new THREE.BoxGeometry(0.08, 0.1, 0.4);
+        const receiver = new THREE.Mesh(receiverGeo, bodyMat);
+        group.add(receiver);
+
+        // Grip
+        const gripGeo = new THREE.BoxGeometry(0.06, 0.18, 0.1);
+        const grip = new THREE.Mesh(gripGeo, accentMat);
+        grip.rotation.x = Math.PI / 6;
+        grip.position.set(0, -0.12, 0.12);
+        group.add(grip);
+
+        // Barrel
+        const barrelGeo = new THREE.BoxGeometry(0.04, 0.04, 0.3);
+        const barrel = new THREE.Mesh(barrelGeo, accentMat);
+        barrel.position.set(0, 0.02, -0.25);
+        group.add(barrel);
+    }
+
+    buildShotgunPickup(group, bodyMat, accentMat) {
+        // Main body
+        const bodyGeo = new THREE.BoxGeometry(0.1, 0.12, 0.7);
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        group.add(body);
+
+        // Double barrels
+        const barrelGeo = new THREE.BoxGeometry(0.04, 0.05, 0.5);
+        const barrel1 = new THREE.Mesh(barrelGeo, accentMat);
+        barrel1.position.set(-0.025, 0.06, -0.4);
+        group.add(barrel1);
+
+        const barrel2 = new THREE.Mesh(barrelGeo, accentMat);
+        barrel2.position.set(0.025, 0.06, -0.4);
+        group.add(barrel2);
+
+        // Stock
+        const stockGeo = new THREE.BoxGeometry(0.08, 0.1, 0.3);
+        const stock = new THREE.Mesh(stockGeo, bodyMat);
+        stock.position.set(0, -0.02, 0.45);
+        group.add(stock);
+
+        // Grip
+        const gripGeo = new THREE.BoxGeometry(0.06, 0.15, 0.08);
+        const grip = new THREE.Mesh(gripGeo, accentMat);
+        grip.rotation.x = Math.PI / 5;
+        grip.position.set(0, -0.12, 0.18);
+        group.add(grip);
+
+        // Pump
+        const pumpGeo = new THREE.BoxGeometry(0.08, 0.06, 0.18);
+        const pump = new THREE.Mesh(pumpGeo, bodyMat);
+        pump.position.set(0, -0.06, -0.12);
+        group.add(pump);
+    }
+
+    buildSMGPickup(group, bodyMat, accentMat) {
+        // Receiver
+        const receiverGeo = new THREE.BoxGeometry(0.09, 0.12, 0.45);
+        const receiver = new THREE.Mesh(receiverGeo, bodyMat);
+        group.add(receiver);
+
+        // Barrel shroud
+        const shroudGeo = new THREE.BoxGeometry(0.06, 0.08, 0.28);
+        const shroud = new THREE.Mesh(shroudGeo, accentMat);
+        shroud.position.set(0, 0.02, -0.32);
+        group.add(shroud);
+
+        // Barrel
+        const barrelGeo = new THREE.BoxGeometry(0.03, 0.03, 0.22);
+        const barrel = new THREE.Mesh(barrelGeo, accentMat);
+        barrel.position.set(0, 0.02, -0.48);
+        group.add(barrel);
+
+        // Folding stock
+        const stockGeo = new THREE.BoxGeometry(0.05, 0.08, 0.22);
+        const stock = new THREE.Mesh(stockGeo, bodyMat);
+        stock.position.set(0, 0, 0.32);
+        group.add(stock);
+
+        // Grip
+        const gripGeo = new THREE.BoxGeometry(0.06, 0.16, 0.08);
+        const grip = new THREE.Mesh(gripGeo, accentMat);
+        grip.rotation.x = Math.PI / 6;
+        grip.position.set(0, -0.14, 0.1);
+        group.add(grip);
+
+        // Extended magazine
+        const magGeo = new THREE.BoxGeometry(0.05, 0.28, 0.06);
+        const mag = new THREE.Mesh(magGeo, new THREE.MeshStandardMaterial({ color: 0x333333, flatShading: true }));
+        mag.position.set(0, -0.2, -0.06);
+        group.add(mag);
+    }
+
+    buildSniperPickup(group, bodyMat, accentMat) {
+        // Long receiver
+        const receiverGeo = new THREE.BoxGeometry(0.09, 0.12, 0.8);
+        const receiver = new THREE.Mesh(receiverGeo, bodyMat);
+        group.add(receiver);
+
+        // Long barrel
+        const barrelGeo = new THREE.BoxGeometry(0.04, 0.04, 0.55);
+        const barrel = new THREE.Mesh(barrelGeo, accentMat);
+        barrel.position.set(0, 0.03, -0.6);
+        group.add(barrel);
+
+        // Scope
+        const scopeGeo = new THREE.BoxGeometry(0.05, 0.08, 0.25);
+        const scopeMat = new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true });
+        const scope = new THREE.Mesh(scopeGeo, scopeMat);
+        scope.position.set(0, 0.12, -0.12);
+        group.add(scope);
+
+        // Scope lens (front)
+        const lensGeo = new THREE.BoxGeometry(0.04, 0.04, 0.02);
+        const lensMat = new THREE.MeshStandardMaterial({ color: 0x4444ff, emissive: 0x222266, flatShading: true });
+        const lens = new THREE.Mesh(lensGeo, lensMat);
+        lens.position.set(0, 0.12, -0.25);
+        group.add(lens);
+
+        // Stock
+        const stockGeo = new THREE.BoxGeometry(0.08, 0.12, 0.35);
+        const stock = new THREE.Mesh(stockGeo, bodyMat);
+        stock.position.set(0, -0.02, 0.52);
+        group.add(stock);
+
+        // Grip
+        const gripGeo = new THREE.BoxGeometry(0.06, 0.18, 0.08);
+        const grip = new THREE.Mesh(gripGeo, accentMat);
+        grip.rotation.x = Math.PI / 6;
+        grip.position.set(0, -0.14, 0.18);
+        group.add(grip);
+
+        // Bipod (collapsed)
+        const bipodGeo = new THREE.BoxGeometry(0.08, 0.03, 0.05);
+        const bipod = new THREE.Mesh(bipodGeo, accentMat);
+        bipod.position.set(0, -0.08, -0.4);
+        group.add(bipod);
     }
 
     update(delta) {
