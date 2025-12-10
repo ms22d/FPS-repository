@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DARK ZONE - PSX Horror FPS</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+            color: #aaa;
+            text-shadow: 2px 2px 4px black, 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        #crosshair {
+            width: 4px;
+            height: 4px;
+            background-color: #ff3333;
+            border: 1px solid #880000;
+            opacity: 0.9;
+        }
+
+        #ammo-display {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 20px;
+            color: #cc4444;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        #weapon-indicator {
+            position: absolute;
+            bottom: 50px;
+            right: 20px;
+            font-size: 14px;
+            color: #888;
+            letter-spacing: 3px;
+        }
+
+        #pickup-message {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            font-size: 24px;
+            color: #44ff44;
+            text-shadow: 0 0 10px #00ff00, 2px 2px 4px black;
+            letter-spacing: 4px;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        #controls-hint {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 2px;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        #controls-hint strong {
+            color: #aa4444;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui-layer">
+        <div id="crosshair"></div>
+        <div id="weapon-indicator">PISTOL</div>
+        <div id="ammo-display">Pistol: 12 / 12</div>
+        <div id="pickup-message"></div>
+
+        <!-- Damage Vignette -->
+        <div id="damage-vignette"></div>
+
+        <!-- HUD Container -->
+        <div id="hud-container">
+            <div class="bar-container">
+                <div class="bar-label">HEALTH</div>
+                <div id="health-bar-bg">
+                    <div id="health-bar-fill"></div>
+                </div>
+            </div>
+            <div class="bar-container">
+                <div class="bar-label">STAMINA</div>
+                <div id="stamina-bar-bg">
+                    <div id="stamina-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="controls-hint">
+            <strong>[ CLICK TO START ]</strong><br><br>
+            WASD - Move<br>
+            SHIFT - Sprint<br>
+            SPACE - Jump<br>
+            R - Reload<br>
+            RMB - Aim<br><br>
+            <strong>FIND WEAPONS</strong>
+        </div>
+    </div>
+    <!-- Import map for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>
