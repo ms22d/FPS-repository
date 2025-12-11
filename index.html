@@ -155,7 +155,165 @@
             RMB - Aim<br><br>
             <strong>FIND WEAPONS</strong>
         </div>
+
+        <!-- Round Timer Display -->
+        <div id="round-display">
+            <div id="round-number">WAITING FOR PLAYERS</div>
+            <div id="round-timer">--:--</div>
+        </div>
+
+        <!-- Score Display -->
+        <div id="score-display">
+            <div id="score-title">SCORES</div>
+            <div id="score-list"></div>
+        </div>
+
+        <!-- Round Announcement -->
+        <div id="round-announcement">
+            <div id="announcement-text"></div>
+        </div>
+
+        <!-- Death Screen -->
+        <div id="death-screen">
+            <div id="death-text">YOU DIED</div>
+            <div id="death-subtext">Waiting for next round...</div>
+        </div>
+
+        <!-- Kill Feed -->
+        <div id="kill-feed"></div>
     </div>
+
+    <style>
+        #round-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        #round-number {
+            font-size: 14px;
+            color: #888;
+            letter-spacing: 3px;
+        }
+
+        #round-timer {
+            font-size: 28px;
+            color: #ff4444;
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        #score-display {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border: 1px solid #333;
+            min-width: 120px;
+        }
+
+        #score-title {
+            font-size: 12px;
+            color: #666;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        #score-list {
+            font-size: 11px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .score-entry.me {
+            color: #44ff44;
+        }
+
+        #round-announcement {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+        }
+
+        #announcement-text {
+            font-size: 48px;
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.8), 4px 4px 8px black;
+            letter-spacing: 8px;
+            animation: announcePulse 0.5s ease-in-out;
+        }
+
+        @keyframes announcePulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #death-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(80, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #death-text {
+            font-size: 64px;
+            color: #ff0000;
+            text-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+            letter-spacing: 10px;
+            animation: deathPulse 1s infinite;
+        }
+
+        @keyframes deathPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        #death-subtext {
+            font-size: 16px;
+            color: #888;
+            margin-top: 20px;
+            letter-spacing: 3px;
+        }
+
+        #kill-feed {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            font-size: 12px;
+            color: #ff6666;
+            line-height: 1.8;
+        }
+
+        .kill-entry {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            margin-bottom: 4px;
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+    </style>
     <!-- Import map for Three.js -->
     <script type="importmap">
         {

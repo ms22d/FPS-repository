@@ -58,9 +58,141 @@ function init() {
         projectiles.push(proj);
     });
 
+    // Setup round UI callbacks
+    networkManager.setRoundCallbacks(
+        handleRoundUpdate,
+        handleScoreUpdate,
+        handleKillEvent
+    );
+
     // 7. Event Listeners
     window.addEventListener('resize', onWindowResize);
     document.addEventListener('click', () => player.lockControls());
+}
+
+// Round UI Handlers
+function handleRoundUpdate(data) {
+    const roundNumber = document.getElementById('round-number');
+    const roundTimer = document.getElementById('round-timer');
+    const announcement = document.getElementById('round-announcement');
+    const announcementText = document.getElementById('announcement-text');
+
+    switch (data.type) {
+        case 'gameState':
+            if (data.active) {
+                roundNumber.innerText = `ROUND ${data.round}`;
+                updateTimerDisplay(data.timeRemaining);
+            } else {
+                roundNumber.innerText = 'WAITING FOR PLAYERS';
+                roundTimer.innerText = '--:--';
+            }
+            break;
+
+        case 'countdown':
+            roundNumber.innerText = data.message;
+            roundTimer.innerText = data.countdown;
+            
+            announcement.style.display = 'block';
+            announcementText.innerText = data.countdown;
+            break;
+
+        case 'roundStart':
+            roundNumber.innerText = `ROUND ${data.round}`;
+            updateTimerDisplay(data.duration);
+            
+            announcement.style.display = 'block';
+            announcementText.innerText = 'FIGHT!';
+            
+            setTimeout(() => {
+                announcement.style.display = 'none';
+            }, 2000);
+            break;
+
+        case 'timer':
+            updateTimerDisplay(data.timeRemaining);
+            break;
+
+        case 'roundEnd':
+            let endText = 'ROUND OVER';
+            if (data.reason === 'elimination') {
+                endText = data.winner === networkManager.getMyId() ? 'VICTORY!' : 'ELIMINATED';
+            } else if (data.reason === 'timeout') {
+                endText = 'TIME UP';
+            }
+            
+            announcement.style.display = 'block';
+            announcementText.innerText = endText;
+            
+            setTimeout(() => {
+                announcement.style.display = 'none';
+                roundNumber.innerText = 'NEXT ROUND STARTING...';
+                roundTimer.innerText = '--:--';
+            }, 3000);
+            break;
+    }
+}
+
+function updateTimerDisplay(seconds) {
+    const roundTimer = document.getElementById('round-timer');
+    if (!roundTimer) return;
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    roundTimer.innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+    
+    // Flash red when low time
+    if (seconds <= 10) {
+        roundTimer.style.animation = 'announcePulse 0.5s infinite';
+    } else {
+        roundTimer.style.animation = 'none';
+    }
+}
+
+function handleScoreUpdate(scores) {
+    const scoreList = document.getElementById('score-list');
+    if (!scoreList) return;
+    
+    const myId = networkManager.getMyId();
+    
+    // Sort by score
+    const sortedScores = Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8); // Top 8
+    
+    scoreList.innerHTML = sortedScores.map(([id, score]) => {
+        const isMe = id === myId;
+        const shortId = id.substring(0, 6);
+        return `<div class="score-entry${isMe ? ' me' : ''}">
+            <span>${isMe ? 'YOU' : shortId}</span>
+            <span>${score}</span>
+        </div>`;
+    }).join('');
+}
+
+function handleKillEvent(data) {
+    const killFeed = document.getElementById('kill-feed');
+    if (!killFeed) return;
+    
+    const myId = networkManager.getMyId();
+    const killerName = data.killer === myId ? 'You' : data.killer.substring(0, 6);
+    const victimName = data.victim === myId ? 'You' : data.victim.substring(0, 6);
+    
+    const entry = document.createElement('div');
+    entry.className = 'kill-entry';
+    entry.innerHTML = `<span style="color: ${data.killer === myId ? '#44ff44' : '#ff6666'}">${killerName}</span> ☠ <span style="color: ${data.isMe ? '#ff0000' : '#888'}">${victimName}</span>`;
+    
+    killFeed.insertBefore(entry, killFeed.firstChild);
+    
+    // Remove old entries
+    while (killFeed.children.length > 5) {
+        killFeed.removeChild(killFeed.lastChild);
+    }
+    
+    // Fade out after 5 seconds
+    setTimeout(() => {
+        entry.style.opacity = '0';
+        setTimeout(() => entry.remove(), 500);
+    }, 5000);
 }
 
 function onWindowResize() {

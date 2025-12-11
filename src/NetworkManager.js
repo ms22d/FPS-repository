@@ -16,6 +16,17 @@ export class NetworkManager {
         this.lastUpdateTime = 0;
         this.updateRate = 0.05; // 20 updates per second (50ms)
 
+        // Round system state
+        this.roundActive = false;
+        this.currentRound = 0;
+        this.timeRemaining = 0;
+        this.scores = {};
+        
+        // UI callbacks
+        this.onRoundUpdate = null;
+        this.onScoreUpdate = null;
+        this.onKillEvent = null;
+
         this.setupSocketListeners();
     }
 
@@ -58,15 +69,7 @@ export class NetworkManager {
         });
 
         this.socket.on('playerShot', (shootData) => {
-            // Buffer the shot? Or just fire immediately if we have the callback?
-            // We need to pass the projectile creation up to Main.
-            // Let's store pending shots or just fire if we have the reference.
-            // Better: NetworkManager.update() calls RemotePlayer.update(), but shoot is event based.
-            // We can just trigger it here if we have a callback stored, or store the event.
-
             if (this.remotePlayers[shootData.id]) {
-                // We need the onShoot callback here.
-                // Let's store a reference or emit an event.
                 if (this.onShootCallback) {
                     this.remotePlayers[shootData.id].shoot(shootData.direction, this.onShootCallback);
                 }
@@ -78,11 +81,125 @@ export class NetworkManager {
                 this.player.takeDamage(damage);
             }
         });
+
+        // Round system events
+        this.socket.on('gameState', (state) => {
+            this.currentRound = state.round;
+            this.roundActive = state.roundActive;
+            this.timeRemaining = state.timeRemaining;
+            this.scores = state.scores;
+            
+            if (this.onRoundUpdate) {
+                this.onRoundUpdate({
+                    type: 'gameState',
+                    round: this.currentRound,
+                    active: this.roundActive,
+                    timeRemaining: this.timeRemaining
+                });
+            }
+            if (this.onScoreUpdate) {
+                this.onScoreUpdate(this.scores);
+            }
+        });
+
+        this.socket.on('roundCountdown', (data) => {
+            if (this.onRoundUpdate) {
+                this.onRoundUpdate({
+                    type: 'countdown',
+                    countdown: data.countdown,
+                    message: data.message
+                });
+            }
+        });
+
+        this.socket.on('roundStart', (data) => {
+            this.currentRound = data.round;
+            this.roundActive = true;
+            this.timeRemaining = data.duration;
+            this.scores = data.scores;
+            
+            // Respawn player at new position
+            if (data.players && data.players[this.socket.id]) {
+                const myData = data.players[this.socket.id];
+                this.player.respawn(myData.x, myData.y, myData.z);
+            }
+            
+            if (this.onRoundUpdate) {
+                this.onRoundUpdate({
+                    type: 'roundStart',
+                    round: this.currentRound,
+                    duration: data.duration
+                });
+            }
+            if (this.onScoreUpdate) {
+                this.onScoreUpdate(this.scores);
+            }
+        });
+
+        this.socket.on('roundTimer', (data) => {
+            this.timeRemaining = data.timeRemaining;
+            
+            if (this.onRoundUpdate) {
+                this.onRoundUpdate({
+                    type: 'timer',
+                    timeRemaining: this.timeRemaining
+                });
+            }
+        });
+
+        this.socket.on('roundEnd', (data) => {
+            this.roundActive = false;
+            this.scores = data.scores;
+            
+            if (this.onRoundUpdate) {
+                this.onRoundUpdate({
+                    type: 'roundEnd',
+                    round: data.round,
+                    reason: data.reason,
+                    winner: data.winner
+                });
+            }
+            if (this.onScoreUpdate) {
+                this.onScoreUpdate(this.scores);
+            }
+        });
+
+        this.socket.on('playerKilled', (data) => {
+            this.scores = data.scores;
+            
+            if (this.onKillEvent) {
+                this.onKillEvent({
+                    killer: data.killer,
+                    victim: data.victim,
+                    isMe: data.victim === this.socket.id
+                });
+            }
+            if (this.onScoreUpdate) {
+                this.onScoreUpdate(this.scores);
+            }
+        });
+
+        this.socket.on('respawn', (playerData) => {
+            if (this.player.respawn) {
+                this.player.respawn(playerData.x, playerData.y, playerData.z);
+            }
+        });
     }
 
     // Set callback for projectile spawning
     setOnShootCallback(cb) {
         this.onShootCallback = cb;
+    }
+
+    // Set callbacks for round UI
+    setRoundCallbacks(onRoundUpdate, onScoreUpdate, onKillEvent) {
+        this.onRoundUpdate = onRoundUpdate;
+        this.onScoreUpdate = onScoreUpdate;
+        this.onKillEvent = onKillEvent;
+    }
+
+    getMyId() {
+        return this.socket ? this.socket.id : null;
     }
 
     update(delta) {
@@ -137,5 +254,9 @@ export class NetworkManager {
             targetId: targetId,
             damage: damage
         });
+    }
+
+    requestRespawn() {
+        this.socket.emit('requestRespawn');
     }
 }

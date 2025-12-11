@@ -1,32 +1,45 @@
 import * as THREE from 'three';
 
 export class Projectile {
-    constructor(scene, position, direction) {
+    constructor(scene, position, direction, speed = 60, damage = 10) {
         this.scene = scene;
-        this.speed = 25;
-        this.damage = 10;
+        this.speed = speed; // Increased default speed
+        this.damage = damage;
         this.alive = true;
         this.creationTime = performance.now();
-        this.maxLifeTime = 3000; // 3 seconds
+        this.maxLifeTime = 4000; // 4 seconds for longer range
 
-        // PSX-style mesh (low poly, flat shading)
-        const geometry = new THREE.BoxGeometry(0.15, 0.15, 0.3);
+        // Visible projectile mesh - glowing bullet
+        const geometry = new THREE.SphereGeometry(0.08, 6, 6);
         const material = new THREE.MeshBasicMaterial({ 
-            color: 0xffaa00,
-            flatShading: true
+            color: 0xffcc00,
+            transparent: true,
+            opacity: 0.9
         }); 
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.copy(position);
 
+        // Add glow effect
+        const glowGeo = new THREE.SphereGeometry(0.15, 6, 6);
+        const glowMat = new THREE.MeshBasicMaterial({
+            color: 0xff8800,
+            transparent: true,
+            opacity: 0.4
+        });
+        this.glow = new THREE.Mesh(glowGeo, glowMat);
+        this.mesh.add(this.glow);
+
         // Direction normalized
-        this.velocity = direction.normalize().multiplyScalar(this.speed);
+        this.velocity = direction.clone().normalize().multiplyScalar(this.speed);
         
         // Rotate bullet to face direction
-        this.mesh.lookAt(position.clone().add(this.velocity));
+        if (this.velocity.length() > 0) {
+            this.mesh.lookAt(position.clone().add(this.velocity));
+        }
 
         // Add trail effect
         this.trail = [];
-        this.trailLength = 5;
+        this.trailLength = 8;
 
         this.scene.add(this.mesh);
     }

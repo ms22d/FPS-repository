@@ -42,7 +42,7 @@ export class Player {
         // Dash settings
         this.dashSpeed = 25.0;
         this.dashDuration = 0.15; // seconds
-        this.dashCooldown = 3.0; // seconds
+        this.dashCooldown = 2.0; // seconds (reduced from 3)
         this.dashTimer = 0;
         this.dashCooldownTimer = 0;
         this.isDashing = false;
@@ -522,6 +522,11 @@ export class Player {
         if (this.health < 0) this.health = 0;
         this.updateHUD();
 
+        // Play damage sound
+        if (this.soundManager) {
+            this.soundManager.playDamage();
+        }
+
         // Damage Vignette
         const vignette = document.getElementById('damage-vignette');
         if (vignette) {
@@ -532,11 +537,50 @@ export class Player {
         }
 
         if (this.health <= 0) {
-            // Game Over
-            // Ideally notify Main to stop loop or show UI
-            // For now: Simple alert
-            alert("Game Over! Reloading...");
-            location.reload();
+            // Player died - notify network manager will handle respawn
+            this.onDeath();
+        }
+    }
+
+    onDeath() {
+        // Show death screen
+        const deathScreen = document.getElementById('death-screen');
+        if (deathScreen) {
+            deathScreen.style.display = 'flex';
+        }
+    }
+
+    respawn(x, y, z) {
+        // Reset health
+        this.health = this.maxHealth;
+        this.updateHUD();
+        
+        // Reset position
+        this.controls.getObject().position.set(x, y + this.playerHeight, z);
+        
+        // Reset velocity
+        this.velocity.set(0, 0, 0);
+        
+        // Reset dash
+        this.dashCooldownTimer = 0;
+        this.isDashing = false;
+        
+        // Reset weapon to pistol
+        this.weapon.switchWeapon('pistol');
+        
+        // Hide death screen
+        const deathScreen = document.getElementById('death-screen');
+        if (deathScreen) {
+            deathScreen.style.display = 'none';
+        }
+        
+        // Update low health state
+        this.isLowHealth = false;
+        this.lowHealthOverlayActive = false;
+        
+        const lowHealthOverlay = document.getElementById('low-health-overlay');
+        if (lowHealthOverlay) {
+            lowHealthOverlay.style.display = 'none';
         }
     }
 
